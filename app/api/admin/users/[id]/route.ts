@@ -4,10 +4,13 @@ import { authOptions } from "@/lib/auth"
 import { connectToDatabase } from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+type RouteParams = {
+  params: {
+    id: string
+  }
+}
+
+export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions)
 
@@ -16,14 +19,16 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { id } = await params
     const { status } = await request.json()
 
     const { db } = await connectToDatabase()
 
     const result = await db
       .collection("users")
-      .updateOne({ _id: new ObjectId(id) }, { $set: { status, updatedAt: new Date() } })
+      .updateOne(
+        { _id: new ObjectId(params.id) },
+        { $set: { status, updatedAt: new Date() } }
+      )
 
     if (result.matchedCount === 0) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
@@ -36,10 +41,7 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions)
 
@@ -48,13 +50,11 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { id } = await params
-
     const { db } = await connectToDatabase()
 
     const result = await db
       .collection("users")
-      .deleteOne({ _id: new ObjectId(id) })
+      .deleteOne({ _id: new ObjectId(params.id) })
 
     if (result.deletedCount === 0) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
