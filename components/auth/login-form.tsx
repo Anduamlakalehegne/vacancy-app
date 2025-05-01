@@ -1,100 +1,157 @@
 "use client"
 
-import { Suspense } from "react"
+import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import { signIn } from "next-auth/react"
+import { z } from "zod"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 import { Button } from "@/components/ui/button"
-import Link from "next/link"
-import { Mail, Lock } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { useToast } from "@/hooks/use-toast"
+import { EyeIcon, EyeOffIcon, Loader2 } from "lucide-react"
 
-function LoginFormContent() {
+const loginSchema = z.object({
+  email: z.string().email({ message: "Please enter a valid email address" }),
+  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
+})
+
+type LoginFormValues = z.infer<typeof loginSchema>
+
+export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const error = searchParams.get("error")
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard"
+  const { toast } = useToast()
+  const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    const formData = new FormData(e.currentTarget)
-    const email = formData.get("email") as string
-    const password = formData.get("password") as string
+  const callbackUrl = searchParams?.get("callbackUrl") || "/dashboard"
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  })
+
+  const onSubmit = async (data: LoginFormValues) => {
+    setIsLoading(true)
 
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+      const result = await signIn("credentials", {
+        redirect: false,
+        email: data.email,
+        password: data.password,
       })
 
-      if (response.ok) {
-        router.push(callbackUrl)
+      if (result?.error) {
+        toast({
+          title: "Login Failed",
+          description: result.error,
+          variant: "destructive",
+        })
       } else {
-        const data = await response.json()
-        router.push(`/login?error=${data.error}`)
+        // Fetch user data to check role
+        const userResponse = await fetch("/api/auth/me")
+        const userData = await userResponse.json()
+
+        toast({
+          title: "Login Successful",
+          description: "Welcome back to Wegagen Bank Careers!",
+        })
+
+        // Redirect based on user role
+        if (userData.role === "admin") {
+          router.push("/admin/dashboard")
+        } else {
+          router.push(callbackUrl)
+        }
+        router.refresh()
       }
     } catch (error) {
-      router.push("/login?error=An error occurred")
+      toast({
+        title: "Something went wrong",
+        description: "Please try again later",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
     }
   }
 
   return (
-    <Card className="w-full">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold text-center">Login to Your Account</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {error && (
-          <div className="mb-4 p-3 bg-destructive/10 text-destructive text-sm rounded-md">
-            {error === "CredentialsSignin" ? "Invalid email or password" : error}
-          </div>
-        )}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Email</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                name="email"
-                type="email"
-                placeholder="Enter your email"
-                className="pl-10"
-                required
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Password</label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                name="password"
-                type="password"
-                placeholder="Enter your password"
-                className="pl-10"
-                required
-              />
-            </div>
-          </div>
-          <Button type="submit" className="w-full">
-            Login
-          </Button>
-        </form>
-        <div className="mt-4 text-center text-sm">
-          <span className="text-muted-foreground">Don't have an account? </span>
-          <Link href="/register" className="text-primary hover:underline">
-            Register
-          </Link>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input
+          id="email"
+          type="email"
+          placeholder="name@example.com"
+          autoComplete="email"
+          disabled={isLoading}
+          {...register("email")}
+        />
+        {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+      </div>
 
-export function LoginForm() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <LoginFormContent />
-    </Suspense>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="password">Password</Label>
+          <Button variant="link" className="px-0 text-xs" asChild>
+            <a href="/forgot-password">Forgot password?</a>
+          </Button>
+        </div>
+        <div className="relative">
+          <Input
+            id="password"
+            type={showPassword ? "text" : "password"}
+            placeholder="••••••••"
+            autoComplete="current-password"
+            disabled={isLoading}
+            {...register("password")}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+            onClick={() => setShowPassword(!showPassword)}
+            disabled={isLoading}
+          >
+            {showPassword ? (
+              <EyeOffIcon className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <EyeIcon className="h-4 w-4 text-muted-foreground" />
+            )}
+            <span className="sr-only">{showPassword ? "Hide password" : "Show password"}</span>
+          </Button>
+        </div>
+        {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+      </div>
+
+      <Button type="submit" className="w-full" disabled={isLoading}>
+        {isLoading ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Signing in...
+          </>
+        ) : (
+          "Sign in"
+        )}
+      </Button>
+
+      <div className="text-center text-sm">
+        Don&apos;t have an account?{" "}
+        <Button variant="link" className="p-0" asChild>
+          <a href="/register">Create an account</a>
+        </Button>
+      </div>
+    </form>
   )
 }

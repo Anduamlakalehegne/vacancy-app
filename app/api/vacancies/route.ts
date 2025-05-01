@@ -1,22 +1,39 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import clientPromise from "@/lib/mongodb"
 
 export async function GET(req: Request) {
   try {
-    const session = await getServerSession(authOptions)
-
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    const { searchParams } = new URL(req.url)
+    const category = searchParams.get("category")
+    const location = searchParams.get("location")
+    const search = searchParams.get("search")
 
     const client = await clientPromise
     const db = client.db("wegagen_bank")
 
+    // Build query based on filters
+    const query: any = {
+      status: "active" // Only show active vacancies
+    }
+
+    if (category && category !== "all") {
+      query.department = category
+    }
+
+    if (location && location !== "all") {
+      query.location = location
+    }
+
+    if (search) {
+      query.$or = [
+        { position: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } }
+      ]
+    }
+
     const vacancies = await db
       .collection("vacancies")
-      .find({})
+      .find(query)
       .sort({ createdAt: -1 })
       .toArray()
 

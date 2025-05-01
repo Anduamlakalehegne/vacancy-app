@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowRight, Search, Loader2, Calendar, MapPin } from "lucide-react"
+import { ArrowRight, Search, Loader2, Calendar, MapPin, GraduationCap, Briefcase } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { format } from "date-fns"
 
@@ -18,8 +18,16 @@ interface Vacancy {
   endDate: string
   position: string
   requiredNumber: string
+  education: string
+  purpose: string
+  experience: string
+  responsibilities: string[]
   placeOfWork: string
+  salary: string
   status: string
+  requirements: string[]
+  createdAt: string
+  updatedAt: string
 }
 
 export default function VacanciesPage() {
@@ -165,7 +173,7 @@ export default function VacanciesPage() {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-6  w-[80%] mx-auto">
+          <div className="grid grid-cols-1 gap-6 w-[80%] mx-auto">
             {vacancies.map((job) => (
               <Card key={job._id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
@@ -183,13 +191,33 @@ export default function VacanciesPage() {
                           {job.placeOfWork}
                         </span>
                         <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold">
+                          <Briefcase className="h-3 w-3 mr-1" />
                           Required: {job.requiredNumber}
                         </span>
                         <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-semibold">
                           <Calendar className="h-3 w-3 mr-1" />
-                          Deadline: {formatDate(job.endDate)}
-                          <span className="ml-1">({getDaysRemaining(job.endDate)})</span>
+                          Posted: {formatDate(job.startDate)}
                         </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        {job.purpose 
+                          ? `${job.purpose.substring(0, 100)}...`
+                          : 'No description available'}
+                      </p>
+                      <div className="space-y-2">
+                      {/* <p className="text-sm font-medium">
+                          <GraduationCap className="h-4 w-4 inline mr-1" />
+                          Education: <span className="text-muted-foreground">{job.education}</span>
+                        </p>
+                        <p className="text-sm font-medium">
+                          <Briefcase className="h-4 w-4 inline mr-1" />
+                          Experience: <span className="text-muted-foreground">{job.experience}</span>
+                        </p>
+                        <p className="text-sm font-medium">
+                          <Calendar className="h-4 w-4 inline mr-1" />
+                          Deadline: <span className="text-primary">{formatDate(job.endDate)}</span>
+                          <span className="ml-2 text-xs text-muted-foreground">({getDaysRemaining(job.endDate)})</span>
+                      </p> */}
                       </div>
                     </div>
                     <div className="flex flex-col justify-center gap-2 md:min-w-32">

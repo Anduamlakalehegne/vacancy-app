@@ -2,7 +2,6 @@ import NextAuth, { AuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { compare } from "bcryptjs"
 import clientPromise from "@/lib/mongodb"
-import { ObjectId } from "mongodb"
 
 export const authOptions: AuthOptions = {
   providers: [
