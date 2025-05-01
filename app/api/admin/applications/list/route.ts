@@ -1,31 +1,25 @@
 import { NextResponse } from "next/server"
-import { connectToDatabase } from "@/lib/mongodb"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import clientPromise from "@/lib/mongodb"
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const { db } = await connectToDatabase()
-    const applications = await db.collection("applications")
-      .aggregate([
-        { $sort: { createdAt: -1 } },
-        {
-          $lookup: {
-            from: "users",
-            localField: "userId",
-            foreignField: "_id",
-            as: "user"
-          }
-        },
-        {
-          $lookup: {
-            from: "vacancies",
-            localField: "vacancyId",
-            foreignField: "_id",
-            as: "vacancy"
-          }
-        }
-      ])
+    const session = await getServerSession(authOptions)
+
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const client = await clientPromise
+    const db = client.db("wegagen_bank")
+
+    const applications = await db
+      .collection("applications")
+      .find({})
+      .sort({ appliedDate: -1 })
       .toArray()
-    
+
     return NextResponse.json(applications)
   } catch (error) {
     console.error("Error fetching applications:", error)

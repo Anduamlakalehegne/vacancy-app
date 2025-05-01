@@ -10,8 +10,9 @@ import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
 import { Search, Filter, Calendar } from "lucide-react"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { DatePicker } from "@/components/ui/date-picker"
 import { useRouter } from "next/navigation"
+import DatePicker from "react-datepicker"
+import "react-datepicker/dist/react-datepicker.css"
 
 interface Application {
   _id: string
@@ -202,9 +203,11 @@ export default function ApplicationsPage() {
             <div className="space-y-2">
               <label className="text-sm font-medium">By Date</label>
               <DatePicker
-                date={selectedDate}
-                setDate={handleDateChange}
-                placeholder="Select date"
+                selected={selectedDate}
+                onChange={handleDateChange}
+                className="w-full rounded-md border border-input bg-background px-3 py-2"
+                dateFormat="MMMM d, yyyy"
+                placeholderText="Select date"
               />
             </div>
 

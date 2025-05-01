@@ -1,10 +1,10 @@
-import NextAuth from "next-auth"
+import NextAuth, { AuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
-import { compare } from "bcrypt"
+import { compare } from "bcryptjs"
 import clientPromise from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
 
-export const authOptions = {
+export const authOptions: AuthOptions = {
   providers: [
     CredentialsProvider({
       id: "credentials",
@@ -35,19 +35,8 @@ export const authOptions = {
             throw new Error("Incorrect password")
           }
 
-          // Convert MongoDB ObjectId to string
-          const userId = user._id instanceof ObjectId ? user._id.toString() : user._id.toString()
-
-          console.log("User authenticated:", {
-            id: userId,
-            email: user.email,
-            name: user.name,
-            role: user.role || "user",
-          })
-
-          // Return user with explicit id field
           return {
-            id: userId,
+            id: user._id.toString(),
             email: user.email,
             name: user.name,
             role: user.role || "user",
@@ -71,22 +60,16 @@ export const authOptions = {
   },
   callbacks: {
     async jwt({ token, user }) {
-      // When signing in, add user data to token
       if (user) {
         token.id = user.id
         token.role = user.role
-        token.sub = user.id // Ensure sub is set to user.id for consistency
       }
       return token
     },
     async session({ session, token }) {
-      // Add token data to session
       if (token && session.user) {
-        // Explicitly set these properties on the session.user object
-        session.user.id = token.id
-        session.user.role = token.role || "user"
-        // Add sub as a fallback ID field
-        session.user.sub = token.sub
+        session.user.id = token.id as string
+        session.user.role = token.role as string
       }
       return session
     },
